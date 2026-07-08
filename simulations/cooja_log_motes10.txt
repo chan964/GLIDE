@@ -1,0 +1,80 @@
+00:00.073	ID:8	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.073	ID:8	...
+00:00.073	ID:8	
+00:00.073	ID:8	=== L-ECQV + DID Authentication Demo ===
+00:00.073	ID:8	Building MSG_1...
+00:00.073	ID:8	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.073	ID:8	=== Energest Report ===
+00:00.073	ID:8	=== Done ===
+00:00.236	ID:2	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.236	ID:2	...
+00:00.236	ID:2	
+00:00.236	ID:2	=== L-ECQV + DID Authentication Demo ===
+00:00.236	ID:2	Building MSG_1...
+00:00.236	ID:2	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.236	ID:2	=== Energest Report ===
+00:00.236	ID:2	=== Done ===
+00:00.250	ID:6	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.250	ID:6	...
+00:00.250	ID:6	
+00:00.250	ID:6	=== L-ECQV + DID Authentication Demo ===
+00:00.250	ID:6	Building MSG_1...
+00:00.250	ID:6	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.250	ID:6	=== Energest Report ===
+00:00.250	ID:6	=== Done ===
+00:00.348	ID:4	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.348	ID:4	...
+00:00.348	ID:4	
+00:00.348	ID:4	=== L-ECQV + DID Authentication Demo ===
+00:00.348	ID:4	Building MSG_1...
+00:00.348	ID:4	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.348	ID:4	=== Energest Report ===
+00:00.348	ID:4	=== Done ===
+00:00.382	ID:1	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.382	ID:1	...
+00:00.382	ID:1	
+00:00.382	ID:1	=== L-ECQV + DID Authentication Demo ===
+00:00.382	ID:1	Building MSG_1...
+00:00.382	ID:1	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.382	ID:1	=== Energest Report ===
+00:00.382	ID:1	=== Done ===
+00:00.402	ID:7	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.402	ID:7	...
+00:00.402	ID:7	
+00:00.402	ID:7	=== L-ECQV + DID Authentication Demo ===
+00:00.402	ID:7	Building MSG_1...
+00:00.402	ID:7	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.402	ID:7	=== Energest Report ===
+00:00.402	ID:7	=== Done ===
+00:00.556	ID:10	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.556	ID:10	...
+00:00.556	ID:10	
+00:00.556	ID:10	=== L-ECQV + DID Authentication Demo ===
+00:00.556	ID:10	Building MSG_1...
+00:00.556	ID:10	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.556	ID:10	=== Energest Report ===
+00:00.556	ID:10	=== Done ===
+00:00.708	ID:9	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.708	ID:9	...
+00:00.708	ID:9	
+00:00.708	ID:9	=== L-ECQV + DID Authentication Demo ===
+00:00.708	ID:9	Building MSG_1...
+00:00.708	ID:9	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.708	ID:9	=== Energest Report ===
+00:00.708	ID:9	=== Done ===
+00:00.715	ID:5	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.715	ID:5	...
+00:00.715	ID:5	
+00:00.715	ID:5	=== L-ECQV + DID Authentication Demo ===
+00:00.715	ID:5	Building MSG_1...
+00:00.715	ID:5	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.715	ID:5	=== Energest Report ===
+00:00.715	ID:5	=== Done ===
+00:00.899	ID:3	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.899	ID:3	...
+00:00.899	ID:3	
+00:00.899	ID:3	=== L-ECQV + DID Authentication Demo ===
+00:00.899	ID:3	Building MSG_1...
+00:00.899	ID:3	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.899	ID:3	=== Energest Report ===
+00:00.899	ID:3	=== Done ===

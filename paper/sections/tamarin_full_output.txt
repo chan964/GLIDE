@@ -1,0 +1,516 @@
+maude tool: 'maude'
+ checking version: WARNING:
+
+ 'maude --version' returned unsupported version '3.2'
+ Please install one of the following versions of Maude: 2.7.1, 3.0, 3.1, 3.2.1, 3.2.2, 3.3, 3.3.1, 3.4, 3.5, 3.5.1
+
+Detailed results from testing 'maude'
+ command: maude --version
+ stdin:   
+ stdout:  3.2
+
+ stderr:  
+ checking installation: OK.
+[Theory LECQV_DID_Auth] Theory loaded
+[Theory LECQV_DID_Auth] Theory translated
+[Theory LECQV_DID_Auth] Derivation checks started
+[Theory LECQV_DID_Auth] Derivation checks ended
+[Theory LECQV_DID_Auth] Theory closed
+[Saturating Sources] Step 1 (Max 5)
+[Saturating Sources] Done
+theory LECQV_DID_Auth
+
+begin
+
+// Function signature and definition of the equational theory E
+
+builtins: diffie-hellman
+functions: cert_info/3, ecqv_reconstruct/3, fst/1, h/1, hkdf/2, pair/2,
+           pk/1, sign/2, snd/1, true/0, verify/3
+equations:
+    fst(<x.1, x.2>) = x.1,
+    snd(<x.1, x.2>) = x.2,
+    verify(sign(x.1, x.2), x.1, pk(x.2)) = true
+
+rule (modulo E) Issuer_Setup:
+   [ Fr( ~d_ca ) ]
+  --[ IssuerSetup( $I, pk(~d_ca) ) ]->
+   [
+   !IssuerKey( $I, ~d_ca ), !IssuerPubKey( $I, pk(~d_ca) ), Out( pk(~d_ca) )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Issuer_Provision_Device:
+   [ !IssuerKey( $I, ~d_ca ), Fr( ~k ), Fr( ~u ) ]
+  --[ ProvisionedDevice( $I, $D, pk(~u) ), DevicePrivKey( $D, ~u ) ]->
+   [
+   !DeviceCert( $D, ~k,
+                sign(<~k, cert_info($I, 'timestamp', '31536000')>, ~d_ca),
+                cert_info($I, 'timestamp', '31536000')
+   ),
+   !DevicePrivateKey( $D, ~u ), !DevicePubKey( $D, pk(~u) )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Gateway_Bootstrap:
+   [ !IssuerPubKey( $I, Q_ca ), Fr( ~gw_key ) ]
+  --[ GatewayBootstrap( $G, $I, Q_ca ) ]->
+   [
+   !GatewayKey( $G, ~gw_key ), !GatewayPubKey( $G, pk(~gw_key) ),
+   !GatewayPinnedIssuer( $G, $I, Q_ca ), Out( pk(~gw_key) )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Device_Store_GW_Pubkey:
+   [ !GatewayPubKey( $G, Q_gw ), !DevicePrivateKey( $D, ~d ) ]
+  --[ DeviceKnowsGateway( $D, $G ) ]->
+   [ !DeviceGWKey( $D, $G, Q_gw ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Device_Send_MSG1:
+   [
+   !DevicePrivateKey( $D, ~d ), !DeviceCert( $D, ~R, ~cert_sig, ~ci ),
+   !DeviceGWKey( $D, $G, Q_gw ), Fr( ~e_d ), Fr( ~nonce_d )
+   ]
+  --[
+  DeviceSentMSG1( $D, $G,
+                  <'g'^~e_d, ~R, ~ci, ~nonce_d, sign(<'g'^~e_d, ~R, ~ci, ~nonce_d>, ~d)>,
+                  ~nonce_d, 'g'^~e_d
+  )
+  ]->
+   [
+   DeviceWaitingMSG2( $D, $G, ~d, ~e_d, 'g'^~e_d, ~nonce_d,
+                      <'g'^~e_d, ~R, ~ci, ~nonce_d, sign(<'g'^~e_d, ~R, ~ci, ~nonce_d>, ~d)>
+   ),
+   Out( <'g'^~e_d, ~R, ~ci, ~nonce_d, 
+         sign(<'g'^~e_d, ~R, ~ci, ~nonce_d>, ~d)>
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Gateway_Recv_MSG1_Send_MSG2:
+   [
+   !GatewayKey( $G, ~gw_key ), !GatewayPinnedIssuer( $G, $I, Q_ca ),
+   In( <E_d, R, ci, nonce_d, sig_d> ), Fr( ~e_g ), Fr( ~nonce_g ),
+   Eq( verify(sig_d, <E_d, R, ci, nonce_d>, ecqv_reconstruct(R, ci, Q_ca)),
+       true
+   )
+   ]
+  --[
+  GatewayAuthenticatedDevice( $G, ecqv_reconstruct(R, ci, Q_ca),
+                              hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                                    sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                                   E_d^~e_g)
+  ),
+  GatewaySentMSG2( $G,
+                   <'g'^~e_g, ~nonce_g, 
+                    sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                   ~nonce_g, 'g'^~e_g,
+                   hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                         sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                        E_d^~e_g)
+  ),
+  SessionKey( $G,
+              hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                    sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                   E_d^~e_g)
+  ),
+  Neq( E_d, 'g'^~e_g )
+  ]->
+   [
+   GatewayDone( $G,
+                hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                      sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                     E_d^~e_g)
+   ),
+   Out( <'g'^~e_g, ~nonce_g, 
+         sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>
+   )
+   ]
+
+  /*
+  rule (modulo AC) Gateway_Recv_MSG1_Send_MSG2:
+     [
+     !GatewayKey( $G, ~gw_key ), !GatewayPinnedIssuer( $G, $I, Q_ca ),
+     In( <E_d, R, ci, nonce_d, sig_d> ), Fr( ~e_g ), Fr( ~nonce_g ),
+     Eq( verify(sig_d, <E_d, R, ci, nonce_d>, ecqv_reconstruct(R, ci, Q_ca)),
+         true
+     )
+     ]
+    --[
+    GatewayAuthenticatedDevice( $G, ecqv_reconstruct(R, ci, Q_ca),
+                                hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                                      sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                                     z)
+    ),
+    GatewaySentMSG2( $G,
+                     <'g'^~e_g, ~nonce_g, 
+                      sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                     ~nonce_g, 'g'^~e_g,
+                     hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                           sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                          z)
+    ),
+    SessionKey( $G,
+                hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                      sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                     z)
+    ),
+    Neq( E_d, 'g'^~e_g )
+    ]->
+     [
+     GatewayDone( $G,
+                  hkdf(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g, 
+                        sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>,
+                       z)
+     ),
+     Out( <'g'^~e_g, ~nonce_g, 
+           sign(<<E_d, R, ci, nonce_d, sig_d>, 'g'^~e_g, ~nonce_g>, ~gw_key)>
+     )
+     ]
+    variants (modulo AC)
+    1. ~e_g  = ~e_g.38
+       E_d   = E_d.41
+       z     = E_d.41^~e_g.38
+    
+    2. ~e_g  = ~e_g.376
+       E_d   = x.747^x.748
+       z     = x.747^(~e_g.376*x.748)
+    
+    3. E_d   = DH_neutral
+       z     = DH_neutral
+  */
+
+rule (modulo E) Device_Recv_MSG2:
+   [
+   DeviceWaitingMSG2( $D, $G, ~d, ~e_d, E_d, ~nonce_d, msg1 ),
+   !DeviceGWKey( $D, $G, Q_gw ), In( <'g'^e_g_exp, nonce_g, sig_g> ),
+   Eq( verify(sig_g, <msg1, 'g'^e_g_exp, nonce_g>, Q_gw), true )
+   ]
+  --[
+  DeviceAuthenticatedGateway( $D, $G,
+                              hkdf(<msg1, 'g'^e_g_exp, nonce_g, sig_g>, 'g'^e_g_exp^~e_d)
+  ),
+  SessionKey( $D,
+              hkdf(<msg1, 'g'^e_g_exp, nonce_g, sig_g>, 'g'^e_g_exp^~e_d)
+  ),
+  DeviceDone( $D, $G,
+              hkdf(<msg1, 'g'^e_g_exp, nonce_g, sig_g>, 'g'^e_g_exp^~e_d)
+  )
+  ]->
+   [
+   DeviceDone( $D, $G,
+               hkdf(<msg1, 'g'^e_g_exp, nonce_g, sig_g>, 'g'^e_g_exp^~e_d)
+   )
+   ]
+
+  /*
+  rule (modulo AC) Device_Recv_MSG2:
+     [
+     DeviceWaitingMSG2( $D, $G, ~d, ~e_d, E_d, ~nonce_d, msg1 ),
+     !DeviceGWKey( $D, $G, Q_gw ), In( <z, nonce_g, sig_g> ), Eq( z.1, true )
+     ]
+    --[
+    DeviceAuthenticatedGateway( $D, $G, hkdf(<msg1, z, nonce_g, sig_g>, z.2)
+    ),
+    SessionKey( $D, hkdf(<msg1, z, nonce_g, sig_g>, z.2) ),
+    DeviceDone( $D, $G, hkdf(<msg1, z, nonce_g, sig_g>, z.2) )
+    ]->
+     [ DeviceDone( $D, $G, hkdf(<msg1, z, nonce_g, sig_g>, z.2) ) ]
+    variants (modulo AC)
+     1. ~e_d  = ~e_d.15
+        Q_gw  = Q_gw.15
+        msg1  = msg1.15
+        nonce_g
+              = nonce_g.15
+        sig_g = sig_g.15
+        z     = 'g'
+        z.1   = verify(sig_g.15, <msg1.15, 'g', nonce_g.15>, Q_gw.15)
+        z.2   = 'g'^~e_d.15
+    
+     2. ~e_d  = ~e_d.15
+        Q_gw  = Q_gw.15
+        msg1  = msg1.15
+        nonce_g
+              = nonce_g.15
+        sig_g = sig_g.15
+        z     = 'g'^e_g_exp.15
+        z.1   = verify(sig_g.15, <msg1.15, 'g'^e_g_exp.15, nonce_g.15>, Q_gw.15)
+        z.2   = 'g'^(~e_d.15*e_g_exp.15)
+    
+     3. ~e_d  = ~x.15
+        Q_gw  = Q_gw.16
+        msg1  = msg1.16
+        nonce_g
+              = nonce_g.16
+        sig_g = sig_g.16
+        z     = 'g'^inv(~x.15)
+        z.1   = verify(sig_g.16, <msg1.16, 'g'^inv(~x.15), nonce_g.16>, Q_gw.16)
+        z.2   = 'g'
+    
+     4. ~e_d  = ~x.15
+        Q_gw  = Q_gw.20
+        msg1  = msg1.20
+        nonce_g
+              = nonce_g.20
+        sig_g = sig_g.20
+        z     = 'g'^inv((~x.15*x.19))
+        z.1   = verify(sig_g.20, <msg1.20, 'g'^inv((~x.15*x.19)), nonce_g.20>,
+                       Q_gw.20)
+        z.2   = 'g'^inv(x.19)
+    
+     5. ~e_d  = ~x.15
+        Q_gw  = Q_gw.20
+        msg1  = msg1.20
+        nonce_g
+              = nonce_g.20
+        sig_g = sig_g.20
+        z     = 'g'^(x.19*inv(~x.15))
+        z.1   = verify(sig_g.20, <msg1.20, 'g'^(x.19*inv(~x.15)), nonce_g.20>,
+                       Q_gw.20)
+        z.2   = 'g'^x.19
+    
+     6. ~e_d  = ~x.15
+        Q_gw  = Q_gw.21
+        msg1  = msg1.21
+        nonce_g
+              = nonce_g.21
+        sig_g = sig_g.21
+        z     = 'g'^(x.19*inv((~x.15*x.20)))
+        z.1   = verify(sig_g.21,
+                       <msg1.21, 'g'^(x.19*inv((~x.15*x.20))), nonce_g.21>, Q_gw.21)
+        z.2   = 'g'^(x.19*inv(x.20))
+    
+     7. ~e_d  = ~x.15
+        Q_gw  = pk(x.18)
+        msg1  = x.19
+        nonce_g
+              = x.20
+        sig_g = sign(<x.19, 'g'^inv(~x.15), x.20>, x.18)
+        z     = 'g'^inv(~x.15)
+        z.1   = true
+        z.2   = 'g'
+    
+     8. ~e_d  = ~x.15
+        Q_gw  = pk(x.18)
+        msg1  = x.20
+        nonce_g
+              = x.21
+        sig_g = sign(<x.20, 'g'^inv((~x.15*x.19)), x.21>, x.18)
+        z     = 'g'^inv((~x.15*x.19))
+        z.1   = true
+        z.2   = 'g'^inv(x.19)
+    
+     9. ~e_d  = ~x.15
+        Q_gw  = pk(x.18)
+        msg1  = x.20
+        nonce_g
+              = x.21
+        sig_g = sign(<x.20, 'g'^(x.19*inv(~x.15)), x.21>, x.18)
+        z     = 'g'^(x.19*inv(~x.15))
+        z.1   = true
+        z.2   = 'g'^x.19
+    
+    10. ~e_d  = ~x.15
+        Q_gw  = pk(x.18)
+        msg1  = x.21
+        nonce_g
+              = x.22
+        sig_g = sign(<x.21, 'g'^(x.19*inv((~x.15*x.20))), x.22>, x.18)
+        z     = 'g'^(x.19*inv((~x.15*x.20)))
+        z.1   = true
+        z.2   = 'g'^(x.19*inv(x.20))
+    
+    11. ~e_d  = ~e_d.18
+        Q_gw  = pk(x.15)
+        msg1  = x.16
+        nonce_g
+              = x.17
+        sig_g = sign(<x.16, 'g', x.17>, x.15)
+        z     = 'g'
+        z.1   = true
+        z.2   = 'g'^~e_d.18
+    
+    12. ~e_d  = ~e_d.19
+        Q_gw  = pk(x.15)
+        msg1  = x.17
+        nonce_g
+              = x.18
+        sig_g = sign(<x.17, 'g'^x.16, x.18>, x.15)
+        z     = 'g'^x.16
+        z.1   = true
+        z.2   = 'g'^(x.16*~e_d.19)
+  */
+
+restriction Equality:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  */
+
+restriction Inequality:
+  "∀ x #i. (Neq( x, x ) @ #i) ⇒ (⊥)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ x #i. (Neq( x, x ) @ #i) ⇒ (⊥)"
+  */
+
+lemma Executability:
+  exists-trace "∃ D G sk #i. DeviceAuthenticatedGateway( D, G, sk ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ D G sk #i. (DeviceAuthenticatedGateway( D, G, sk ) @ #i)"
+*/
+simplify
+by solve( DeviceWaitingMSG2( $D, $G, ~d, ~e_d, E_d, ~nonce_d, msg1
+          ) ▶₀ #i )
+
+lemma Gateway_Authenticates_Device:
+  all-traces
+  "∀ G Q_dev sk #i.
+    (GatewayAuthenticatedDevice( G, Q_dev, sk ) @ #i) ⇒
+    (∃ D msg1 nonce_d E_d #j.
+      (DeviceSentMSG1( D, G, msg1, nonce_d, E_d ) @ #j) ∧ (#j < #i))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ G Q_dev sk #i.
+  (GatewayAuthenticatedDevice( G, Q_dev, sk ) @ #i)
+ ∧
+  ∀ D msg1 nonce_d E_d #j.
+   (DeviceSentMSG1( D, G, msg1, nonce_d, E_d ) @ #j) ⇒ ¬(#j < #i)"
+*/
+simplify
+solve( !GatewayKey( $G, ~gw_key ) ▶₀ #i )
+  case Gateway_Bootstrap
+  solve( !GatewayPinnedIssuer( $G, $I, Q_ca ) ▶₁ #i )
+    case Gateway_Bootstrap
+    by solve( Eq( verify(sig_d, <E_d, R, ci, nonce_d>,
+                         ecqv_reconstruct(R, ci, pk(~d_ca))),
+                  true
+              ) ▶₅ #i )
+  qed
+qed
+
+lemma Device_Authenticates_Gateway:
+  all-traces
+  "∀ D G sk #i.
+    (DeviceAuthenticatedGateway( D, G, sk ) @ #i) ⇒
+    (∃ msg2 nonce_g E_g #j.
+      (GatewaySentMSG2( G, msg2, nonce_g, E_g, sk ) @ #j) ∧ (#j < #i))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ D G sk #i.
+  (DeviceAuthenticatedGateway( D, G, sk ) @ #i)
+ ∧
+  ∀ msg2 nonce_g E_g #j.
+   (GatewaySentMSG2( G, msg2, nonce_g, E_g, sk ) @ #j) ⇒ ¬(#j < #i)"
+*/
+simplify
+by solve( DeviceWaitingMSG2( $D, $G, ~d, ~e_d, E_d, ~nonce_d, msg1
+          ) ▶₀ #i )
+
+lemma Session_Key_Agreement:
+  all-traces
+  "∀ G sk1 sk2 #i #j.
+    (((SessionKey( G, sk1 ) @ #i) ∧ (SessionKey( G, sk2 ) @ #j)) ∧
+     (#i = #j)) ⇒
+    (sk1 = sk2)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ G sk1 sk2 #i #j.
+  (SessionKey( G, sk1 ) @ #i) ∧ (SessionKey( G, sk2 ) @ #j) ∧ (#i = #j)
+ ∧
+  ¬(sk1 = sk2)"
+*/
+simplify
+solve( SessionKey( G, sk1 ) @ #i )
+  case Device_Recv_MSG2
+  by solve( DeviceWaitingMSG2( $D, $G, ~d, ~e_d, E_d, ~nonce_d, msg1
+            ) ▶₀ #i )
+next
+  case Gateway_Recv_MSG1_Send_MSG2
+  solve( !GatewayKey( $G, ~gw_key ) ▶₀ #i )
+    case Gateway_Bootstrap
+    solve( !GatewayPinnedIssuer( $G, $I, Q_ca ) ▶₁ #i )
+      case Gateway_Bootstrap
+      by solve( Eq( verify(sig_d, <E_d, R, ci, nonce_d>,
+                           ecqv_reconstruct(R, ci, pk(~d_ca))),
+                    true
+                ) ▶₅ #i )
+    qed
+  qed
+qed
+
+/*
+WARNING: the following wellformedness checks failed!
+
+Variable with mismatching sorts or capitalization
+=================================================
+
+Possible reasons:
+1. Identifiers are case sensitive, i.e.,'x' and 'X' are considered to be different.
+2. The same holds for sorts:, i.e., '$x', 'x', and '~x' are considered to be different.
+
+  rule `Device_Store_GW_Pubkey': 
+    1. $D, ~d
+  
+  rule `Device_Send_MSG1': 
+    1. $D, ~d
+  
+  rule `Device_Recv_MSG2': 
+    1. $D, ~d
+    
+    2. ~e_d, E_d
+
+Facts occur in the left-hand-side but not in any right-hand-side 
+=================================================================
+
+  1. in rule "Gateway_Recv_MSG1_Send_MSG2":  factName `Eq' arity: 2 multiplicity: Linear
+  
+  2. in rule "Device_Recv_MSG2":  factName `Eq' arity: 2 multiplicity: Linear
+
+Message Derivation Checks
+=========================
+
+  The variables of the following rule(s) are not derivable from their premises, you may be performing unintended pattern matching.
+
+Rule Device_Recv_MSG2: 
+Failed to derive Variable(s): e_g_exp
+*/
+
+/*
+Generated from:
+Tamarin version 1.12.0
+Maude version 3.2 (unsupported)
+Git revision: 82780bbaf3328a45f624ddb41e51bf75425f851c (with uncommited changes), branch: master
+Compiled at: 2026-03-07 14:22:39.174278293 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: paper/sections/tamarin_model.spthy
+
+  processing time: 3.79s
+  
+  WARNING: 5 wellformedness check failed!
+           The analysis results might be wrong!
+  
+  Executability (exists-trace): falsified - no trace found (2 steps)
+  Gateway_Authenticates_Device (all-traces): verified (4 steps)
+  Device_Authenticates_Gateway (all-traces): verified (2 steps)
+  Session_Key_Agreement (all-traces): verified (6 steps)
+
+==============================================================================

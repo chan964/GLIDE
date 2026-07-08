@@ -1,0 +1,8 @@
+00:00.382	ID:1	Starting Contiki-NG-release/v5.1-63-gbd08e3273-dirty
+00:00.382	ID:1	...
+00:00.382	ID:1	
+00:00.382	ID:1	=== L-ECQV + DID Authentication Demo ===
+00:00.382	ID:1	Building MSG_1...
+00:00.382	ID:1	MSG_2 placeholder empty - MSG_1 measurement only.
+00:00.382	ID:1	=== Energest Report ===
+00:00.382	ID:1	=== Done ===

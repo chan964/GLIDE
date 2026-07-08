@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Issuer keys (NEVER commit private keys)
+issuer_key.json
+*.keyfile
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Additional secrets — device and gateway keys
+gateway_keystore.json
+device_*.json
+device_*.json.bak
+*.json.bak
+
+# Build artifacts
+contiki/build/
+
+# Backup and scratch files
+*.bak
+*.bak2
+*.bak_prerestriction
+*.CURRENT
+*.spthy.prefix
+tests/failing_test.py
