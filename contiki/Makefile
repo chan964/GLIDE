@@ -18,5 +18,5 @@ CFLAGS += -Wno-error=format -Wno-error=format-extra-args
 
 CONTIKI_NG_PATH ?= /home/csp/Desktop/contiki-ng
 MAKE_ROUTING = MAKE_ROUTING_NULLROUTING
-MAKE_NET = MAKE_NET_NULLNET
+MAKE_NET = MAKE_NET_IPV6
 include $(CONTIKI_NG_PATH)/Makefile.include
