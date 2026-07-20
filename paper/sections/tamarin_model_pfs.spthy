@@ -251,12 +251,8 @@ lemma Executability:
         DeviceAuthenticatedGateway(D, G, sk) @i"
 
 /*
- * Lemma 2: Gateway Authentication of Device (Goal G1)
- *
- * If the gateway authenticates a device D and derives session key sk,
- * then D actually sent MSG_1 in this session.
- * No adversary can convince the gateway it authenticated D
- * without D having actually participated.
+ * Lemma 2: Gateway injective agreement of Device 
+ * (Goal G4, replay resistance) -- FALSIFIED; positive witness in Gateway_Replay_Possible
  */
 lemma Gateway_Authenticates_Device:
     "All G Q_dev sk #i.
@@ -267,10 +263,7 @@ lemma Gateway_Authenticates_Device:
           & j < i"
 
 /*
- * Lemma 3: Device Authentication of Gateway (Goal G2)
- *
- * If the device authenticates a gateway G and derives session key sk,
- * then G actually sent MSG_2 in this session (bound to this device's MSG_1).
+ * Lemma 3: Device authentication of Gateway + cross-party key agreement (not a numbered goal; one of the three properties beyond G1-G6)
  */
 lemma Device_Authenticates_Gateway:
     "All D G sk #i.
@@ -305,7 +298,10 @@ lemma Session_Key_Secrecy:
         Secret(A, sk) @i
       ==>
         not (Ex #j. K(sk) @j)"
-
+/*
+ * Lemma 6: Gateway authentication of Device origin (Goal G1, device authentication)
+ * Gateway accepts only credentials the issuer provisioned. VERIFIED.
+ */
 
 lemma Gateway_Authenticates_Device_Origin:
     "All G Q_dev sk #i.
