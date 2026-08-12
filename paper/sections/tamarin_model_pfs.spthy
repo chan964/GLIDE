@@ -138,7 +138,7 @@ rule Device_Send_MSG1:
         /* Device long-term public key, issuer-attested */
         Q_dev   = pk(~xd)
         /* Signing payload: E_d || R || Q_dev || cert_info || nonce_d */
-        payload = <E_d, ~R, Q_dev, ci, ~nonce_d>
+        payload = <E_d, ~R, Q_dev, ci, ~nonce_d, Q_gw>
         /* Signature under device long-term key */
         sig_d   = sign(payload, ~xd)
         msg1    = <E_d, ~R, Q_dev, cert_sig, ci, ~nonce_d, sig_d>
@@ -168,7 +168,7 @@ rule Device_Send_MSG1:
 rule Gateway_Recv_MSG1_Send_MSG2:
     let
         /* Signing payload for device signature verification */
-        payload = <E_d, R, Q_dev, ci, nonce_d>
+        payload = <E_d, R, Q_dev, ci, nonce_d, pk(~gw_key)>
         /* Gateway ephemeral public group element */
         E_g     = 'g'^~e_g
         /* MSG_1 as received */
