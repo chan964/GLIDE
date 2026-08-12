@@ -19,7 +19,7 @@
 #include "credentials.h"
 #include "sys/energest.h"
 #include "sys/log.h"
-/* rs232 stubbed for cc2538dk footprint build */
+#include "dev/rs232.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,7 +38,7 @@ static volatile uint8_t msg2_ready = 0;
 static char           msg2_line[MSG2_LINE_MAX];
 static volatile int   msg2_pos = 0;
 
-static int __attribute__((unused)) serial_input_byte(unsigned char c)
+static int serial_input_byte(unsigned char c)
 {
     if(c == '\n' || c == '\r') {
         if(msg2_pos > 0 && !msg2_ready) {
@@ -108,7 +108,7 @@ PROCESS_THREAD(device_auth_process, ev, data)
     PROCESS_BEGIN();
 
     /* Install custom byte handler for incoming MSG_2 (bypasses serial-line). */
-    /* rs232 stubbed */
+    rs232_set_input(serial_input_byte);
 
     LOG_INFO("=== L-ECQV + DID Authentication Demo ===\n");
     LOG_INFO("Waiting for simulation to stabilize...\n");
