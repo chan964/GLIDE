@@ -166,6 +166,7 @@ def test_e2e_handshake_happy_path(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     # Gateway processes MSG_1 and builds MSG_2
     gw_result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
@@ -193,6 +194,7 @@ def test_tampered_msg1_signature_rejected(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     # Flip the last byte (highly likely to be inside the signature field)
     tampered = bytearray(msg1_bytes)
@@ -213,7 +215,7 @@ def test_expired_cert_rejected_in_msg1(keystore, issuer):
     cert_info = _make_cert_info(issued_at=old, max_age=3600)
     cert = issuer_generate_cert(contribution.U, cert_info, issuer)
     d = device_derive_private_key(contribution, cert)
-    msg1_bytes, _ = device_build_msg1(d, cert.R, cert.cert_info)
+    msg1_bytes, _ = device_build_msg1(d, cert.R, cert.cert_info, keystore.gateway_identity.public_key)
     result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
     assert result.success is False
     assert result.reason == AuthFailureReason.CERT_EXPIRED
@@ -224,7 +226,7 @@ def test_issuer_mismatch_rejected_in_msg1(keystore, issuer):
     cert_info = _make_cert_info(issuer_did="did:web:different-issuer.example")
     cert = issuer_generate_cert(contribution.U, cert_info, issuer)
     d = device_derive_private_key(contribution, cert)
-    msg1_bytes, _ = device_build_msg1(d, cert.R, cert.cert_info)
+    msg1_bytes, _ = device_build_msg1(d, cert.R, cert.cert_info, keystore.gateway_identity.public_key)
     result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
     assert result.success is False
     assert result.reason == AuthFailureReason.ISSUER_MISMATCH
@@ -236,6 +238,7 @@ def test_wrong_gateway_public_key_rejected(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     gw_result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
     assert gw_result.success
@@ -255,6 +258,7 @@ def test_tampered_msg2_rejected(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     gw_result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
     assert gw_result.success
@@ -281,6 +285,7 @@ def test_not_revoked_device_passes_handshake(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     result = gateway_process_msg1_build_msg2(
         keystore, msg1_bytes, revocation_manager=mgr,
@@ -302,6 +307,7 @@ def test_revoked_device_rejected_in_handshake(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     result = gateway_process_msg1_build_msg2(
         keystore, msg1_bytes, revocation_manager=mgr,
@@ -333,6 +339,7 @@ def test_offline_revocation_rejected_in_handshake(keystore, provisioned_device):
         provisioned_device["d"],
         provisioned_device["cert"].R,
         provisioned_device["cert"].cert_info,
+        keystore.gateway_identity.public_key,
     )
     # We need cert freshness to still pass, so inject a fresh "now" for the verifier
     fresh_now = datetime.now(timezone.utc)
@@ -342,3 +349,25 @@ def test_offline_revocation_rejected_in_handshake(keystore, provisioned_device):
     )
     assert result.success is False
     assert result.reason == AuthFailureReason.REVOCATION_UNAVAILABLE
+
+
+# ---------------------------------------------------------------------------
+# Cross-gateway relay countermeasure (Semester 3)
+# ---------------------------------------------------------------------------
+def test_msg1_signed_for_other_gateway_rejected(keystore, provisioned_device):
+    """Cross-gateway relay: MSG_1 signed for gateway A must not verify at B.
+
+    Countermeasure: Q_gw is bound into sigma_d. Corresponds to Tamarin
+    lemma Gateway_Authenticates_Device (verified, 18 steps).
+    """
+    other_gateway = _generate_gateway_identity(lifetime_days=90)
+
+    msg1_bytes, _ = device_build_msg1(
+        provisioned_device["d"],
+        provisioned_device["cert"].R,
+        provisioned_device["cert"].cert_info,
+        other_gateway.public_key,      # signed for a DIFFERENT gateway
+    )
+    result = gateway_process_msg1_build_msg2(keystore, msg1_bytes)
+    assert result.success is False
+    assert result.reason == AuthFailureReason.SIGNATURE_INVALID

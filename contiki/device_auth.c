@@ -123,7 +123,7 @@ int device_auth_build_msg1(device_auth_state_t *state,
     uECC_Curve curve = uECC_secp256r1();
     uint8_t E_d_uncompressed[64];
     uint8_t E_d_compressed[33];
-    uint8_t signing_payload[33 + 33 + DEVICE_CERT_INFO_LEN + AUTH_NONCE_LEN];
+    uint8_t signing_payload[33 + 33 + DEVICE_CERT_INFO_LEN + AUTH_NONCE_LEN + GATEWAY_PUBLIC_KEY_LEN];
     uint8_t signature[AUTH_SIGNATURE_LEN];
     cbor_writer_state_t cbor;
     rtimer_clock_t t_start, t_end;
@@ -148,7 +148,12 @@ int device_auth_build_msg1(device_auth_state_t *state,
         state->nonce_d[i] = (uint8_t)(i ^ 0xA5);
     }
 
-    /* Step 3: Build signing payload = E_d || R || cert_info || nonce_d */
+    /* Step 3: Build signing payload = E_d || R || cert_info || nonce_d || Q_gw
+     *
+     * Q_gw binds the signature to the intended gateway, so a captured MSG_1
+     * is rejected by any other gateway pinning the same issuer. Q_gw is
+     * pre-provisioned on both sides and is NOT transmitted: zero wire cost. */
+
     memcpy(signing_payload + sp_len, E_d_compressed, 33);
     sp_len += 33;
     memcpy(signing_payload + sp_len, DEVICE_CERT_R, DEVICE_CERT_R_LEN);
@@ -157,6 +162,8 @@ int device_auth_build_msg1(device_auth_state_t *state,
     sp_len += DEVICE_CERT_INFO_LEN;
     memcpy(signing_payload + sp_len, state->nonce_d, AUTH_NONCE_LEN);
     sp_len += AUTH_NONCE_LEN;
+    memcpy(signing_payload + sp_len, GATEWAY_PUBLIC_KEY, GATEWAY_PUBLIC_KEY_LEN);
+    sp_len += GATEWAY_PUBLIC_KEY_LEN;
 
     /* Step 4: Sign with device long-term private key d */
     ret = ecdsa_sign(DEVICE_PRIVATE_KEY, signing_payload, sp_len, signature);

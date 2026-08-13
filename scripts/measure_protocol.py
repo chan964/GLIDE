@@ -47,12 +47,16 @@ cert_info = b"did:web:issuer.example||2026-05-27T00:00:00+00:00||31536000"
 cert      = issuer_generate_cert(contrib.U, cert_info, issuer)
 d         = device_derive_private_key(contrib, cert)
 
+# Gateway identity must exist first: Q_gw is bound into the device signature
+gw_identity = _generate_gateway_identity(lifetime_days=90)
+
 # Build a real MSG_1
-msg1_bytes, state = device_build_msg1(d, cert.R, cert_info)
+msg1_bytes, state = device_build_msg1(d, cert.R, cert_info,
+                                      gw_identity.public_key)
 msg1_size = len(msg1_bytes)
 
 # Build a real MSG_2 by running the gateway side
-gw_identity = _generate_gateway_identity(lifetime_days=90)
+
 pinned = PinnedIssuer(
     issuer_did="did:web:issuer.example",
     Q_ca=issuer.Q_ca,

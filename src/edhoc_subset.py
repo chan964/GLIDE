@@ -9,7 +9,8 @@ Restricted subset of RFC 9528 (see docs/DESIGN_DECISIONS.md DD-003):
 
 Protocol flow:
     1. Device generates ephemeral keypair (e_d, E_d)
-    2. Device signs (E_d || R || cert_info || nonce_d) with its long-term key d
+    2. Device signs (E_d || R || cert_info || nonce_d || Q_gw) with its
+       long-term key d, where Q_gw is the pre-provisioned gateway public key
     3. Device sends MSG_1 = {E_d, R, cert_info, nonce_d, signature_d}
     4. Gateway verifies device via ECQV reconstruction + signature check (reuses
        gateway_verifier.verify_signature_under_reconstructed_key).
@@ -167,14 +168,32 @@ def derive_session_key(
 # Signature payload construction (centralized)
 # ---------------------------------------------------------------------------
 
+#def _msg1_signing_bytes(
+#    E_d: PointJacobi,
+#    R: PointJacobi,
+#    cert_info: bytes,
+#    nonce_d: bytes,
+#) -> bytes:
+#    """Bytes the device signs in MSG_1."""
+#    return point_to_compressed(E_d) + point_to_compressed(R) + cert_info + nonce_d
+
 def _msg1_signing_bytes(
     E_d: PointJacobi,
     R: PointJacobi,
     cert_info: bytes,
     nonce_d: bytes,
+    Q_gw: PointJacobi,
 ) -> bytes:
-    """Bytes the device signs in MSG_1."""
-    return point_to_compressed(E_d) + point_to_compressed(R) + cert_info + nonce_d
+    """Bytes the device signs in MSG_1.
+
+    Q_gw is the pre-provisioned gateway long-term public key. Binding it
+    into the signature ties the message to the intended gateway, so a
+    captured MSG_1 is rejected by any other gateway pinning the same
+    issuer. Q_gw is held by both parties from provisioning and is NOT
+    transmitted, so this costs zero wire bytes.
+    """
+    return (point_to_compressed(E_d) + point_to_compressed(R)
+            + cert_info + nonce_d + point_to_compressed(Q_gw))
 
 
 def _msg2_signing_bytes(
@@ -194,6 +213,7 @@ def device_build_msg1(
     d: int,
     R: PointJacobi,
     cert_info: bytes,
+    gateway_public_key: PointJacobi,
 ) -> tuple[bytes, EdhocInitiatorState]:
     """Device builds MSG_1. Returns (msg1_bytes, state_to_retain).
 
@@ -210,7 +230,7 @@ def device_build_msg1(
     nonce_d = secrets.token_bytes(NONCE_SIZE)
 
     # Sign (E_d || R || cert_info || nonce_d) with long-term key d
-    signing_bytes = _msg1_signing_bytes(E_d, R, cert_info, nonce_d)
+    signing_bytes = _msg1_signing_bytes(E_d, R, cert_info, nonce_d, gateway_public_key)
     signing_key = SigningKey.from_secret_exponent(d, curve=NIST256p)
     signature = signing_key.sign_deterministic(
         signing_bytes,
@@ -315,7 +335,7 @@ def gateway_process_msg1_build_msg2(
         )
 
     # --- Verify device signature via reconstruction (reused from verifier) ---
-    signing_bytes = _msg1_signing_bytes(msg1.E_d, msg1.R, msg1.cert_info, msg1.nonce_d)
+    signing_bytes = _msg1_signing_bytes(msg1.E_d, msg1.R, msg1.cert_info, msg1.nonce_d, keystore.gateway_identity.public_key,)
     auth_result = verify_signature_under_reconstructed_key(
         pinned_issuer=keystore.pinned_issuer,
         R=msg1.R,
