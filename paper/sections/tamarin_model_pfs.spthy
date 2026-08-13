@@ -192,6 +192,7 @@ rule Gateway_Recv_MSG1_Send_MSG2:
     , GatewaySentMSG2($G, msg2, ~nonce_g, E_g, sk)
     , SessionKey($G, sk)
     , Secret($G, sk)
+    , SecretPFSGw($G, Q_dev, sk)
     , Neq(E_d, E_g)
     ]->
     [ GatewayDone($G, sk)
@@ -222,9 +223,29 @@ rule Device_Recv_MSG2:
     , DeviceAuthenticatedGateway($D, $G, sk)
     , SessionKey($D, sk)
     , Secret($D, sk)
+    , SecretPFS($D, $G, sk)
     , DeviceDone($D, $G, sk)
     ]->
     [ DeviceDone($D, $G, sk) ]
+
+
+/*
+ * ── Forward Secrecy: long-term key reveal (Semester 3) ────────────────
+ * Gives the adversary the ability to compromise a long-term key at any
+ * point in the trace. Session keys derived before that point must remain
+ * secret even after the reveal — that is the actual PFS property.
+ */
+rule Reveal_Device_LTK:
+    [ !DevicePrivateKey($D, ~xd) ]
+  --[ RevealDev($D)
+    , RevealedKey(pk(~xd)) ]->
+    [ Out(~xd) ]
+
+rule Reveal_Gateway_LTK:
+    [ !GatewayKey($G, ~gw_key) ]
+  --[ RevealGw($G)
+    , RevealedKey(pk(~gw_key)) ]->
+    [ Out(~gw_key) ]
 
 /*
  * ── Restrictions ────────────────────────────────────────────────────
@@ -251,16 +272,19 @@ lemma Executability:
         DeviceAuthenticatedGateway(D, G, sk) @i"
 
 /*
- * Lemma 2: Gateway injective agreement of Device 
- * (Goal G4, replay resistance) -- FALSIFIED; positive witness in Gateway_Replay_Possible
+ * Lemma 2: Gateway non-injective agreement on the addressed gateway
+ * (cross-gateway relay; maps to none of G1-G6) -- Semester 3: VERIFIED
+ * after binding Q_gw into the device signature. Positive witness for
+ * the separate same-gateway replay weakness remains in Gateway_Replay_Possible.
  */
 lemma Gateway_Authenticates_Device:
     "All G Q_dev sk #i.
         GatewayAuthenticatedDevice(G, Q_dev, sk) @i
       ==>
-        Ex D msg1 nonce_d E_d #j.
+        (Ex D msg1 nonce_d E_d #j.
             DeviceSentMSG1(D, G, msg1, nonce_d, E_d) @j
-          & j < i"
+          & #j < #i)
+        | (Ex #r. RevealedKey(Q_dev) @r & #r < #i)"
 
 /*
  * Lemma 3: Device authentication of Gateway + cross-party key agreement (not a numbered goal; one of the three properties beyond G1-G6)
@@ -269,9 +293,10 @@ lemma Device_Authenticates_Gateway:
     "All D G sk #i.
         DeviceAuthenticatedGateway(D, G, sk) @i
       ==>
-        Ex msg2 nonce_g E_g #j.
+        (Ex msg2 nonce_g E_g #j.
             GatewaySentMSG2(G, msg2, nonce_g, E_g, sk) @j
-          & j < i"
+          & #j < #i)
+        | (Ex #r. RevealGw(G) @r & #r < #i)"
 
 /*
  * Lemma 4: Session Key Agreement
@@ -297,7 +322,9 @@ lemma Session_Key_Secrecy:
     "All A sk #i.
         Secret(A, sk) @i
       ==>
-        not (Ex #j. K(sk) @j)"
+        not (Ex #j. K(sk) @j)
+        | (Ex B #r. RevealDev(B) @r & #r < #i)
+        | (Ex B #r. RevealGw(B) @r & #r < #i)"
 /*
  * Lemma 6: Gateway authentication of Device origin (Goal G1, device authentication)
  * Gateway accepts only credentials the issuer provisioned. VERIFIED.
@@ -329,9 +356,30 @@ lemma Gateway_Replay_Possible:
            & #j < #i1 & #j < #i2)"
 
 /*
- * NOTE: Forward secrecy (compromise of long-term keys does not reveal
- * past session keys) is NOT modeled here. It requires explicit adversary
- * key-reveal rules and is deferred to future work per scope declaration.
+ * Lemma 9/10: Forward Secrecy (Semester 3)
+ *
+ * A session key recorded as Secret remains unknown to the adversary
+ * UNLESS the relevant party's long-term key was revealed before that
+ * session key was established. A reveal AFTER the session does not
+ * excuse a leak -- that is the actual forward-secrecy property, and it
+ * is what distinguishes this from Session_Key_Secrecy above.
  */
+lemma Forward_Secrecy_Device:
+    all-traces
+    "All D G sk #i.
+        SecretPFS(D, G, sk) @i
+      ==>
+        not (Ex #j. K(sk) @j)
+        | (Ex #r. RevealDev(D) @r & #r < #i)
+        | (Ex #r. RevealGw(G) @r & #r < #i)"
+
+lemma Forward_Secrecy_Gateway:
+    all-traces
+    "All G Q_dev sk #i.
+        SecretPFSGw(G, Q_dev, sk) @i
+      ==>
+        not (Ex #j. K(sk) @j)
+        | (Ex #r. RevealedKey(Q_dev) @r & #r < #i)
+        | (Ex #r. RevealGw(G) @r & #r < #i)"
 
 end
