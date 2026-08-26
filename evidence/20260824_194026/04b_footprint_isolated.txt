@@ -1,0 +1,2 @@
+   text	   data	    bss	    dec	    hex	filename
+  64387	   2340	   7623	  74350	  1226e	build/cc2538dk/device_auth_main_footprint.cc2538dk

@@ -1,0 +1,8 @@
+Captured:        2026-08-24T19:40:26+05:30
+Host:            Linux csp 6.17.0-29-generic #29~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon May 11 10:30:58 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+Git branch:      relay-fix
+Git commit:      b251d92afcb33e79988549c045e850541b0a56a7
+Git status:      2 uncommitted file(s)
+Python:          Python 3.12.3
+arm-none-eabi:   arm-none-eabi-gcc (15:13.2.rel1-2) 13.2.1 20231009
+Tamarin:         maude tool: 'maude'
