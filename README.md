@@ -28,11 +28,13 @@ src/            Python reference implementation
   issuer_cli.py            credential issuance tool
 contiki/        Device firmware (Contiki-NG, targets cc2538dk)
   device_auth.c            protocol implementation on-device
-  device_auth_main*.c       build entry points (protocol-isolated / full image)
+  device_auth_main*.c       build entry points for different configurations
+docs/           Design decisions, protocol spec, and threat model
 tests/          166 automated tests across 10 modules
 paper/sections/ Tamarin models (.spthy) and paper source
-scripts/        cooja_serial_bridge.py, cap_evidence.sh
+scripts/        cooja_serial_bridge.py and supporting tools
 evidence/       Captured measurement snapshots (regenerable — see below)
+cap_evidence.sh Regenerates all measurements (repo root)
 ```
 
 ## Setup
