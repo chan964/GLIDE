@@ -1,6 +1,0 @@
-target=cc2538dk
-text_bytes=48813
-data_bytes=848
-bss_bytes=11399
-total_bytes=61060
-date=2026-05-27T07:21:12+05:30
