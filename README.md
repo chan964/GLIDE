@@ -13,7 +13,7 @@ with a Python reference implementation and formal verification in Tamarin
 Prover.
 
 Full write-up, evidence, and figures: `CB016451_FYP_FINAL_REPORT.docx`.
-Demonstration video: **[add YouTube link]**
+Demonstration video: **https://youtu.be/UbcVQSsbpWE**
 
 ---
 
